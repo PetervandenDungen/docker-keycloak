@@ -74,7 +74,7 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_DB: mssql
-      KC_DB_URL: jdbc:sqlserver://mssql:1433;databaseName=${MSSQL_DATABASE};encrypt=false
+      KC_DB_URL: jdbc:sqlserver://mssql:1433;databaseName=${KC_DB_NAME};encrypt=false
       KC_DB_USERNAME: ${KC_DB_USERNAME}
       KC_DB_PASSWORD: ${KC_DB_PASSWORD}
     ports:
