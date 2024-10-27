@@ -12,6 +12,7 @@
   <ItemGroup>
     <None Include="docker-compose.yml" />
     <None Include=".dockerignore" />
+    <None Include="init.sql" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="database\" />
