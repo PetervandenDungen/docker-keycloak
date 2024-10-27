@@ -14,7 +14,7 @@ services:
       - ASPNETCORE_URLS=http://*:5001;https://*:5002  # Set correct URLs
     depends_on:
       - mssql
-      - mssql_keycloak_init 
+      - mssql_databases_init
       - keycloak
 
   mssql:
@@ -32,23 +32,27 @@ services:
     ports:
       - "1433:1433"  # Expose MSSQL to the host on port 1433
 
-  mssql_keycloak_init:
-      container_name: mssql_keycloak_init
+  mssql_databases_init:
+      container_name: mssql_webapp_init
       image: mcr.microsoft.com/mssql/server:2022-latest
       volumes:
-        - ./docker/init/keycloak:/docker-entrypoint-initdb.d  
+        - ./docker/init/mssql:/docker-entrypoint-initdb.d 
       depends_on:
         - mssql
       command: >
-         bash -c "
-            # Wait for SQL Server to be available
-            for i in {1..60}; do
-              /opt/mssql-tools18/bin/sqlcmd -S mssql_keycloak_init:1433 -U sa -P '3@s#21V4pj97YPL' -Q 'SELECT 1' -N o -C && break || sleep 2;
-            done;
-    
-            # Run initialization script
-            /opt/mssql-tools18/bin/sqlcmd -S mssql_keycloak_init:1433 -U sa -P  '3@s#21V4pj97YPL' -d master -i /docker-entrypoint-initdb.d/init.sql -N o -C;
-            echo 'All done!';"
+        bash -c "
+          # Wait for SQL Server to be available
+          echo 'Waiting 60 seconds in order to start the mssql server instance.';
+          for i in {1..60}; do
+            /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P '3@s#21V4pj97YPL' -Q 'SELECT 1' -N o -C && break || sleep 2;
+          done;
+
+          # Run initialization scripts
+          /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P '3@s#21V4pj97YPL' -d master -i /docker-entrypoint-initdb.d/webapp_db_init.sql -N o;
+          /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P '3@s#21V4pj97YPL' -d master -i /docker-entrypoint-initdb.d/keycloak_db_init.sql -N o;
+
+          # Finalize with success message
+          echo 'Databases created';"
 
   keycloak:
     image: quay.io/keycloak/keycloak:latest
@@ -71,7 +75,7 @@ services:
     restart: always
     depends_on:
       - mssql
-      - mssql_keycloak_init  
+      - mssql_databases_init  
 
 volumes:
   mssql_data:

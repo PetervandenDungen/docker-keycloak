@@ -1,0 +1,18 @@
+CREATE DATABASE webapp;
+GO
+
+
+USE webapp;
+GO
+
+
+CREATE LOGIN webapp WITH PASSWORD = '3@s#21V4pj97YPL';
+GO
+
+
+CREATE USER webapp FOR LOGIN webapp;
+GO
+
+
+ALTER ROLE db_owner ADD MEMBER webapp;
+GO
