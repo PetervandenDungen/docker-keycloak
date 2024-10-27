@@ -13,21 +13,24 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://*:5001;https://*:5002  # Set correct URLs
     depends_on:
-      - postgres
+      - mssql
       - keycloak
 
-  postgres:
-    image: postgres:16.2
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+        - ACCEPT_EULA=Y
+        - MSSQL_PID=Express
+        - MSSQL_DATABASE=master
+        - MSSQL_USER=sa
+        - MSSQL_SA_PASSWORD=3@s#21V4pj97YPL
+        - MSSQL_PASSWORD=3@s#21V4pj97YPL
+    volumes:
+      - mssql_data:/var/opt/mssqlkeycloak 
+    ports:
+      - "1433:1433"  # Expose MSSQL to the host on port 1433
     networks:
       - keycloak_network
-    ports:
-      - "5432:5432"  # Expose PostgreSQL to the host on port 5432
 
   keycloak:
     image: quay.io/keycloak/keycloak:latest
@@ -41,20 +44,20 @@ services:
       KC_HEALTH_ENABLED: true
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres/keycloak_db
-      KC_DB_USERNAME: keycloak_db_user
-      KC_DB_PASSWORD: keycloak_db_user_password
+      KC_DB: mssql
+      KC_DB_URL: jdbc:sqlserver://mssql:1433;databaseName=master;encrypt=false
+      KC_DB_USERNAME: sa
+      KC_DB_PASSWORD: 3@s#21V4pj97YPL
     ports:
       - 8080:8080 
     restart: always
     depends_on:
-      - postgres
+      - mssql 
     networks:
       - keycloak_network
 
 volumes:
-  postgres_data:
+  mssql_data:
     driver: local
 
 networks:
