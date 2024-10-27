@@ -14,7 +14,7 @@ services:
       - ASPNETCORE_URLS=http://*:5001;https://*:5002  # Set correct URLs
     depends_on:
       - mssql
-      - mssql.keycloak.init 
+      - mssql_keycloak_init 
       - keycloak
 
   mssql:
@@ -32,7 +32,8 @@ services:
     ports:
       - "1433:1433"  # Expose MSSQL to the host on port 1433
 
-  mssql.keycloak.init:
+  mssql_keycloak_init:
+      container_name: mssql_keycloak_init
       image: mcr.microsoft.com/mssql/server:2022-latest
       volumes:
         - ./docker/init/keycloak:/docker-entrypoint-initdb.d  
@@ -42,11 +43,11 @@ services:
          bash -c "
             # Wait for SQL Server to be available
             for i in {1..60}; do
-              /opt/mssql-tools18/bin/sqlcmd -S mssql:1433 -U sa -P '3@s#21V4pj97YPL' -Q 'SELECT 1' -N o -C && break || sleep 2;
+              /opt/mssql-tools18/bin/sqlcmd -S mssql_keycloak_init:1433 -U sa -P '3@s#21V4pj97YPL' -Q 'SELECT 1' -N o -C && break || sleep 2;
             done;
     
             # Run initialization script
-            /opt/mssql-tools18/bin/sqlcmd -S mssql:1433 -U sa -P  '3@s#21V4pj97YPL' -d master -i /docker-entrypoint-initdb.d/init.sql -N o -C;
+            /opt/mssql-tools18/bin/sqlcmd -S mssql_keycloak_init:1433 -U sa -P  '3@s#21V4pj97YPL' -d master -i /docker-entrypoint-initdb.d/init.sql -N o -C;
             echo 'All done!';"
 
   keycloak:
@@ -70,7 +71,7 @@ services:
     restart: always
     depends_on:
       - mssql
-      - mssql.keycloak.init  
+      - mssql_keycloak_init  
 
 volumes:
   mssql_data:
