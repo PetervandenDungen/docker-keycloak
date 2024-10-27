@@ -40,19 +40,25 @@ services:
       depends_on:
         - mssql
       command: >
-        bash -c "
-          # Wait for SQL Server to be available
-          echo 'Waiting 60 seconds in order to start the mssql server instance.';
-          for i in {1..60}; do
-            /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P '3@s#21V4pj97YPL' -Q 'SELECT 1' -N o -C && break || sleep 2;
-          done;
+          bash -c '
+            echo "Starting the mssql server instance... Please hold tight!";
 
-          # Run initialization scripts
-          /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P '3@s#21V4pj97YPL' -d master -i /docker-entrypoint-initdb.d/webapp_db_init.sql -N o;
-          /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P '3@s#21V4pj97YPL' -d master -i /docker-entrypoint-initdb.d/keycloak_db_init.sql -N o;
+            # Wait for SQL Server to be available   
+            for i in {1..60}; do
+              /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P "3@s#21V4pj97YPL" -Q "SELECT 1" -N o -C && break || sleep 2;
 
-          # Finalize with success message
-          echo 'Databases created';"
+              # Clear and echo
+              clear;
+
+              echo "Waiting a " + i + " seconds in order to start the mssql server instance.";
+            done;
+
+            # Run initialization scripts
+            /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P "3@s#21V4pj97YPL" -d master -i /docker-entrypoint-initdb.d/webapp_db_init.sql -N o;
+            /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P "3@s#21V4pj97YPL" -d master -i /docker-entrypoint-initdb.d/keycloak_db_init.sql -N o;
+
+            # Finalize with success message
+            echo "Databases created";'
 
   keycloak:
     image: quay.io/keycloak/keycloak:latest
