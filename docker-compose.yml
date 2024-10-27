@@ -4,7 +4,7 @@ services:
   webapp:
     build:
       context: .
-      dockerfile: .\WebApplication1\Dockerfile
+      dockerfile: ./WebApplication1/Dockerfile
     image: webapp:latest
     ports:
       - "5001:5001"  # Map HTTP to 5001
@@ -21,44 +21,45 @@ services:
     container_name: mssql
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
-        - ACCEPT_EULA=Y
-        - MSSQL_PID=Express
-        - MSSQL_DATABASE=master
-        - MSSQL_USER=sa
-        - MSSQL_SA_PASSWORD=3@s#21V4pj97YPL
-        - MSSQL_PASSWORD=3@s#21V4pj97YPL
+      - ACCEPT_EULA=Y
+      - MSSQL_PID=${MSSQL_PID}
+      - MSSQL_DATABASE=${MSSQL_DATABASE}
+      - MSSQL_USER=${MSSQL_USER}
+      - MSSQL_SA_PASSWORD=${MSSQL_SA_PASSWORD}
     volumes:
       - mssql_data:/var/opt/mssqlwebapplication1
     ports:
       - "1433:1433"  # Expose MSSQL to the host on port 1433
 
   mssql_databases_init:
-      container_name: mssql_webapp_init
-      image: mcr.microsoft.com/mssql/server:2022-latest
-      volumes:
-        - ./docker/init/mssql:/docker-entrypoint-initdb.d 
-      depends_on:
-        - mssql
-      command: >
-          bash -c '
-            echo "Starting the mssql server instance... Please hold tight!";
+    container_name: mssql_webapp_init
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    volumes:
+      - ./docker/init/mssql:/docker-entrypoint-initdb.d 
+    depends_on:
+      - mssql
+    command: >
+        bash -c '
+          echo "Starting the mssql server instance... Please hold tight!";
 
-            # Wait for SQL Server to be available   
-            for i in {1..60}; do
-              /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P "3@s#21V4pj97YPL" -Q "SELECT 1" -N o -C && break || sleep 2;
+          # Wait for SQL Server to be available
+          for i in {1..60}; do
+            /opt/mssql-tools18/bin/sqlcmd -S mssql -U ${MSSQL_USER} -P "${MSSQL_SA_PASSWORD}" -Q "SELECT 1" -N o -C && break || sleep 2;
+            
+            echo "Waiting a few seconds in order to start the mssql server instance.";
+          done;
 
-              # Clear and echo
-              clear;
+          # Run initialization scripts with variables
+          /opt/mssql-tools18/bin/sqlcmd -S mssql -U ${MSSQL_USER} -P "${MSSQL_SA_PASSWORD}" -d master \
+            -v WA_DB_NAME=${WA_DB_NAME} WA_DB_USERNAME=${WA_DB_USERNAME} WA_DB_PASSWORD=${WA_DB_PASSWORD} \
+            -i /docker-entrypoint-initdb.d/webapp_db_init.sql -N o;
 
-              echo "Waiting a " + i + " seconds in order to start the mssql server instance.";
-            done;
+          /opt/mssql-tools18/bin/sqlcmd -S mssql -U ${MSSQL_USER} -P "${MSSQL_SA_PASSWORD}" -d master \
+            -v KC_DB_NAME=${KC_DB_NAME} KC_DB_USERNAME=${KC_DB_USERNAME} KC_DB_PASSWORD=${KC_DB_PASSWORD} \
+            -i /docker-entrypoint-initdb.d/keycloak_db_init.sql -N o;
 
-            # Run initialization scripts
-            /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P "3@s#21V4pj97YPL" -d master -i /docker-entrypoint-initdb.d/webapp_db_init.sql -N o;
-            /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P "3@s#21V4pj97YPL" -d master -i /docker-entrypoint-initdb.d/keycloak_db_init.sql -N o;
-
-            # Finalize with success message
-            echo "Databases created";'
+          # Finalize with success message
+          echo "Databases created";'
 
   keycloak:
     image: quay.io/keycloak/keycloak:latest
@@ -70,12 +71,12 @@ services:
       KC_HTTP_ENABLED: true
       KC_HOSTNAME_STRICT_HTTPS: false
       KC_HEALTH_ENABLED: true
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KC_DB: mssql
-      KC_DB_URL: jdbc:sqlserver://mssql:1433;databaseName=keycloak;encrypt=false
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: 3@s#21V4pj97YPL
+      KC_DB_URL: jdbc:sqlserver://mssql:1433;databaseName=${MSSQL_DATABASE};encrypt=false
+      KC_DB_USERNAME: ${KC_DB_USERNAME}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
     ports:
       - 8080:8080 
     restart: always
